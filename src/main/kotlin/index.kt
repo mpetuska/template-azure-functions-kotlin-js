@@ -1,5 +1,9 @@
 // Note no package, must be on root
-import dev.petuska.azure.functions.kotlin.myHandler
+import dev.petuska.azure.functions.kotlin.handler.myFunctionHandler
+import dev.petuska.azure.functions.kotlin.handler.myGreeterFunctionHandler
 
 @JsExport
-val exportedHandler: AzureFunction = myHandler
+val MyFunction: AzureFunction = myFunctionHandler
+
+@JsExport
+val MyGreeterFunction: AzureFunction = myGreeterFunctionHandler

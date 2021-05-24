@@ -1,6 +1,6 @@
 {
-  "scriptFile": "azure-functions-kotlin.js",
-  "entryPoint": "exportedHandler",
+  "scriptFile": "../azure-functions-kotlin.js",
+  "entryPoint": "MyGreeterFunction",
   "bindings": [
     {
       "authLevel": "function",
@@ -8,8 +8,7 @@
       "direction": "in",
       "name": "req",
       "methods": [
-        "get",
-        "post"
+        "get"
       ]
     },
     {

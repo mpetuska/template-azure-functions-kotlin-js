@@ -15,4 +15,8 @@ After building the project, you can test your functions locally.
 * `func extensions install`
 * `func start`
 
-The sample endpoint will then be available at [http://localhost:7071/api/MyFunction](http://localhost:7071/api/MyFunction)
+Alternatively you can just run `./gradlew runFunctions` that does the same for you via gradle.
+
+The sample endpoints will then be available at:
+* [http://localhost:7071/api/MyFunction](http://localhost:7071/api/MyFunction)
+8 [http://localhost:7071/api/MyGreeterFunction](http://localhost:7071/api/MyGreeterFunction)

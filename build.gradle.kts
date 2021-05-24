@@ -32,7 +32,7 @@ afterEvaluate {
         val compileProductionExecutableKotlinJs by getting(org.jetbrains.kotlin.gradle.targets.js.ir.KotlinJsIrLink::class)
         val processResources by getting(Copy::class)
         val publicPackageJson by getting(org.jetbrains.kotlin.gradle.targets.js.npm.PublicPackageJsonTask::class)
-        named("assembleJsNpmPublication", lt.petuska.npm.publish.task.NpmPackageAssembleTask::class) {
+        val assembleJsNpmPublication by getting(lt.petuska.npm.publish.task.NpmPackageAssembleTask::class) {
             dependsOn(compileProductionExecutableKotlinJs, processResources, publicPackageJson)
             doLast {
                 copy {
@@ -42,13 +42,24 @@ afterEvaluate {
                     from(processResources.destinationDir)
                 }
             }
-            doLast {
+        }
+        val packJsNpmPublication by getting(lt.petuska.npm.publish.task.NpmPackTask::class)
+        create("runFunctions", lt.petuska.npm.publish.task.NpmExecTask::class, packJsNpmPublication.nodeJsDir!!).apply {
+            dependsOn(assembleJsNpmPublication)
+            group = "run"
+            doFirst {
                 copy {
-                    into(destinationDir.resolve("MyFunction"))
-                    from(destinationDir) {
-                        include("function.json", "*.js", "*.d.ts")
-                    }
+                    from(assembleJsNpmPublication.destinationDir)
+                    into(temporaryDir)
                 }
+            }
+            doLast {
+                val execConfig: ExecSpec.() -> Unit = {
+                    workingDir = temporaryDir
+                }
+                npmExec(listOf("install"), execConfig)
+                nodeExec(listOf("node_modules/.bin/func", "extensions", "install"), execConfig)
+                nodeExec(listOf("node_modules/.bin/func", "start"), execConfig)
             }
         }
     }
