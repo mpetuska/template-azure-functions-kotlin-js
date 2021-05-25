@@ -1,11 +1,19 @@
 plugins {
     kotlin("js") version "1.5.0"
     id("lt.petuska.npm.publish") version "1.1.4"
+    idea
 }
 
 repositories {
     jcenter()
     mavenCentral()
+}
+
+idea {
+    module {
+        isDownloadJavadoc = true
+        isDownloadSources = true
+    }
 }
 
 
@@ -57,9 +65,10 @@ afterEvaluate {
                 val execConfig: ExecSpec.() -> Unit = {
                     workingDir = temporaryDir
                 }
-                npmExec(listOf("install"), execConfig)
+                nodeExec(listOf("--version"), execConfig)
+                npmExec(listOf("install", "--scripts-prepend-node-path"), execConfig)
                 nodeExec(listOf("node_modules/.bin/func", "extensions", "install"), execConfig)
-                nodeExec(listOf("node_modules/.bin/func", "start"), execConfig)
+                nodeExec(listOf("node_modules/.bin/func", "start", "-p", "7070"), execConfig)
             }
         }
     }

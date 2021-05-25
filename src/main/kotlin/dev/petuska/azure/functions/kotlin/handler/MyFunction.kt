@@ -7,7 +7,7 @@ import dev.petuska.azure.functions.kotlin.AzureFunction
 import util.isNullOrUndefined
 import kotlin.js.json
 
-val myFunctionHandler = AzureFunction<HttpRequest> { req ->
+val myFunctionHandler = AzureFunction<HttpRequest, Unit> { req ->
     res = if (!isNullOrUndefined(req.query["name"].unsafeCast<Any>()) ||
         (!isNullOrUndefined(req.body.unsafeCast<Any>()) && !isNullOrUndefined(req.body.unsafeCast<Dict<String>>()["name"].unsafeCast<Any>()))
     ) {

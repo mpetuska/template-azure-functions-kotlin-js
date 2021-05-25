@@ -8,7 +8,7 @@ import util.isNullOrUndefined
 import kotlin.js.Date
 import kotlin.js.json
 
-val myGreeterFunctionHandler = AzureFunction<HttpRequest> {
+val myGreeterFunctionHandler = AzureFunction<HttpRequest, Unit> {
     res = json(
         "status" to 200,
         "body" to "${Date()}Greetings, Stranger!",
