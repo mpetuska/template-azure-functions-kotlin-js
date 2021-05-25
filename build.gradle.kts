@@ -64,11 +64,12 @@ afterEvaluate {
             doLast {
                 val execConfig: ExecSpec.() -> Unit = {
                     workingDir = temporaryDir
+                    environment("PATH", "${file(executable).parentFile.absolutePath}:${System.getenv("PATH")}")
                 }
                 nodeExec(listOf("--version"), execConfig)
                 npmExec(listOf("install", "--scripts-prepend-node-path"), execConfig)
                 nodeExec(listOf("node_modules/.bin/func", "extensions", "install"), execConfig)
-                nodeExec(listOf("node_modules/.bin/func", "start", "-p", "7070"), execConfig)
+                nodeExec(listOf("node_modules/.bin/func", "start", "-p", "7070", "--verbose"), execConfig)
             }
         }
     }
