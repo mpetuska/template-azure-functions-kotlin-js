@@ -1,76 +1,100 @@
 plugins {
-    kotlin("js") version "1.5.0"
-    id("lt.petuska.npm.publish") version "1.1.4"
-    idea
+  kotlin("js")
+  kotlin("plugin.serialization")
+  id("dev.petuska.npm.publish")
+  id("com.github.jakemarsden.git-hooks")
+//  id("org.jlleitschuh.gradle.ktlint")
+  idea
 }
 
 repositories {
-    jcenter()
-    mavenCentral()
+  mavenCentral()
+  jcenter()
+}
+
+gitHooks {
+  setHooks(
+    mapOf(
+//      "post-checkout" to "ktlintApplyToIdea",
+      "pre-commit" to "ktlintFormat",
+      "pre-push" to "check"
+    )
+  )
 }
 
 idea {
-    module {
-        isDownloadJavadoc = true
-        isDownloadSources = true
-    }
+  module {
+    isDownloadJavadoc = true
+    isDownloadSources = true
+  }
 }
 
+java {
+  sourceCompatibility = JavaVersion.VERSION_11
+  targetCompatibility = JavaVersion.VERSION_11
+}
 
 kotlin {
-    js(IR) {
-        binaries.executable()
-        useCommonJs()
-        nodejs {}
+  js(IR) {
+    binaries.library()
+    useCommonJs()
+    nodejs {}
+  }
+  sourceSets {
+    main {
+      dependencies {
+        implementation("org.jetbrains.kotlinx:kotlinx-nodejs:_")
+        implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:_")
+        implementation(npm("@azure/functions", "1.2.3", true))
+      }
     }
-    sourceSets {
-        main {
-            dependencies {
-                implementation("org.jetbrains.kotlinx:kotlinx-nodejs:0.0.7")
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.0")
-                implementation(npm("@azure/functions", "1.2.3", true))
-                implementation(devNpm("azure-functions-core-tools", "^3"))
-            }
+  }
+}
+
+npmPublishing {
+  publications {
+    named("js") {
+      packageJson {
+        scripts = mutableMapOf(
+          Pair("func:install", "func extensions install"),
+          Pair("func:run", "func start"),
+        )
+        devDependencies {
+          "azure-functions-core-tools" to "^3"
         }
+      }
     }
+  }
 }
 
 afterEvaluate {
-    tasks {
-        val compileProductionExecutableKotlinJs by getting(org.jetbrains.kotlin.gradle.targets.js.ir.KotlinJsIrLink::class)
-        val processResources by getting(Copy::class)
-        val publicPackageJson by getting(org.jetbrains.kotlin.gradle.targets.js.npm.PublicPackageJsonTask::class)
-        val assembleJsNpmPublication by getting(lt.petuska.npm.publish.task.NpmPackageAssembleTask::class) {
-            dependsOn(compileProductionExecutableKotlinJs, processResources, publicPackageJson)
-            doLast {
-                copy {
-                    into(destinationDir)
-                    from(publicPackageJson.packageJsonFile)
-                    from(compileProductionExecutableKotlinJs.destinationDir)
-                    from(processResources.destinationDir)
-                }
-            }
-        }
-        val packJsNpmPublication by getting(lt.petuska.npm.publish.task.NpmPackTask::class)
-        create("runFunctions", lt.petuska.npm.publish.task.NpmExecTask::class, packJsNpmPublication.nodeJsDir!!).apply {
-            dependsOn(assembleJsNpmPublication)
-            group = "run"
-            doFirst {
-                copy {
-                    from(assembleJsNpmPublication.destinationDir)
-                    into(temporaryDir)
-                }
-            }
-            doLast {
-                val execConfig: ExecSpec.() -> Unit = {
-                    workingDir = temporaryDir
-                    environment("PATH", "${file(executable).parentFile.absolutePath}:${System.getenv("PATH")}")
-                }
-                nodeExec(listOf("--version"), execConfig)
-                npmExec(listOf("install", "--scripts-prepend-node-path"), execConfig)
-                nodeExec(listOf("node_modules/.bin/func", "extensions", "install"), execConfig)
-                nodeExec(listOf("node_modules/.bin/func", "start", "-p", "7070", "--verbose"), execConfig)
-            }
-        }
+  tasks {
+    val assembleJsNpmPublication by getting(dev.petuska.npm.publish.task.NpmPackageAssembleTask::class)
+    val packJsNpmPublication by getting(dev.petuska.npm.publish.task.NpmPackTask::class)
+    val assembleFunctions = create("assembleFunctions", Copy::class) {
+      dependsOn(assembleJsNpmPublication)
+      group = "build"
+      from(assembleJsNpmPublication.destinationDir)
+      destinationDir = temporaryDir
     }
+    create(
+      "runFunctions",
+      dev.petuska.npm.publish.task.NpmExecTask::class,
+      packJsNpmPublication.nodeJsDir!!
+    ).apply {
+      dependsOn(assembleFunctions)
+      group = "run"
+      val execConfig: ExecSpec.() -> Unit = {
+        workingDir = assembleFunctions.destinationDir
+      }
+      val port = 7071
+      doFirst {
+        npmExec(listOf("install", "--scripts-prepend-node-path"), execConfig)
+        npmExec(listOf("run", "func:install", "--scripts-prepend-node-path"), execConfig)
+      }
+      doLast {
+        npmExec(listOf("run", "func:run", "--scripts-prepend-node-path", "--", "-p", "$port"), execConfig)
+      }
+    }
+  }
 }
